@@ -7,9 +7,54 @@ Date: 05/03/2025
 Name: Jasmin Martinez (JRM2319)
 Date: 05/03/25
 
+```{r include=FALSE}
+library(caret)
+library(tidymodels)
+library(mlbench)
+library(ISLR)
+library(caret)
+library(tidymodels)
+library(e1071) 
+library(kernlab) 
+library(ggrepel)
+```
+
 # Question 1: In this problem, we will apply support vector machines to predict whether a given car gets high or low gas mileage based on the dataset “auto.csv” (used in Homework 3; see Homework 3 for more details of the dataset). The response variable is mpg cat. The predictors are cylinders, displacement, horsepower, weight, acceleration, year, and origin. Split the dataset into two parts: training data (70%) and test data (30%). 
+```{r}
+auto = read.csv("auto.csv")
+head(auto)
+
+set.seed(111111)
+datSplit = initial_split(data = auto, prop = 0.7)
+trainData = training(datSplit)
+testData = testing(datSplit)
+head(trainData)
+
+trainData$mpg_cat = as.factor(trainData$mpg_cat)
+testData$mpg_cat = as.factor(testData$mpg_cat)
+```
 
 ## (a): Fit a support vector classifier to the training data. What are the training and test error rates?
+```{r}
+set.seed(1)
+linear.tune <- tune.svm(mpg_cat ~ .,
+                        data = trainData,
+                        kernel = "linear",
+                        cost = exp(seq(-5,2, len = 50)),
+                        scale = TRUE)
+plot(linear.tune)
+
+best.linear = linear.tune$best.model
+
+train.pred = predict(best.linear, trainData)
+train.error = mean(train.pred != trainData$mpg_cat)
+
+test.pred <- predict(best.linear, testData)
+test.error <- mean(test.pred != testData$mpg_cat)
+
+print(train.error)
+print(test.error)
+```
 
 ## (b): Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
 
