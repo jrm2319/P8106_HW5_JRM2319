@@ -43,6 +43,7 @@ linear.tune <- tune.svm(mpg_cat ~ .,
                         cost = exp(seq(-5,2, len = 50)),
                         scale = TRUE)
 plot(linear.tune)
+
 ```
 
 ## (b): Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
