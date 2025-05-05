@@ -43,20 +43,13 @@ linear.tune <- tune.svm(mpg_cat ~ .,
                         cost = exp(seq(-5,2, len = 50)),
                         scale = TRUE)
 plot(linear.tune)
-
-best.linear = linear.tune$best.model
-
-train.pred = predict(best.linear, trainData)
-train.error = mean(train.pred != trainData$mpg_cat)
-
-test.pred <- predict(best.linear, testData)
-test.error <- mean(test.pred != testData$mpg_cat)
-
-print(train.error)
-print(test.error)
 ```
 
 ## (b): Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
+```{r}
+
+```
+
 
 # Question 2: In this problem, we perform hierarchical clustering on the states using the USArrests data in the ISLR package. For each of the 50 states in the United States, the dataset contains the number of arrests per 100,000 residents for each of three crimes: Assault, Murder, and Rape. The dataset also contains the percent of the population in each state living in urban areas, UrbanPop. The four variables will be used as features for clustering.
 
