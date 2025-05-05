@@ -17,6 +17,7 @@ library(tidymodels)
 library(e1071) 
 library(kernlab) 
 library(ggrepel)
+library(plotmo)
 ```
 
 # Question 1: In this problem, we will apply support vector machines to predict whether a given car gets high or low gas mileage based on the dataset “auto.csv” (used in Homework 3; see Homework 3 for more details of the dataset). The response variable is mpg cat. The predictors are cylinders, displacement, horsepower, weight, acceleration, year, and origin. Split the dataset into two parts: training data (70%) and test data (30%). 
@@ -36,6 +37,9 @@ testData$mpg_cat = as.factor(testData$mpg_cat)
 
 ## (a): Fit a support vector classifier to the training data. What are the training and test error rates?
 ```{r}
+testData$mpg_cat_n <- as.numeric(testData$mpg_cat)
+trainData$mpg_cat_n <- as.numeric(trainData$mpg_cat)
+
 set.seed(1)
 linear.tune <- tune.svm(mpg_cat ~ .,
                         data = trainData,
@@ -44,17 +48,145 @@ linear.tune <- tune.svm(mpg_cat ~ .,
                         scale = TRUE)
 plot(linear.tune)
 
+linear.tune$best.parameters
+best.linear <- linear.tune$best.model
+summary(best.linear)
+pred.linear <- predict(best.linear, newdata = testData)
+confusionMatrix(data = pred.linear,
+reference = testData$mpg_cat)
+
+plot(best.linear, trainData,
+      mpg_cat_n ~ weight,
+slice = list(
+       cylinders     = median(trainData$cylinders, na.rm = TRUE),
+       displacement  = median(trainData$displacement, na.rm = TRUE),
+       horsepower = median(trainData$horsepower, na.rm = TRUE),
+       weight = median(trainData$weight, na.rm = TRUE),
+       acceleration  = median(trainData$acceleration, na.rm = TRUE),
+       year          = median(trainData$year, na.rm = TRUE),
+       origin        = median(trainData$origin, na.rm = TRUE)),
+      grid = 100)
+
+best.linear.model = linear.tune$best.model
+test.pred = predict(best.linear.model, newdata = testData)
+test.error = mean(test.pred != testData$mpg_cat)
+cat("Test Data Error Rate:", test.error, "\n")
+train.pred = predict(best.linear.model, newdata = trainData)
+train.error = mean(train.pred != trainData$mpg_cat)
+cat("Training Data Error Rate:", train.error, "\n")
 ```
 
 ## (b): Fit a support vector machine with a radial kernel to the training data. What are the training and test error rates?
 ```{r}
+set.seed(1)
+radial.tune <- tune.svm(mpg_cat ~ . ,
+                data = trainData,
+                kernel = "radial",
+                cost = exp(seq(1, 7, len = 50)),
+                gamma = exp(seq(-10, -2,len = 20)))
+plot(radial.tune, transform.y = log, transform.x = log,
+color.palette = terrain.colors)
+```
+```{r}
+radial.tune$best.parameters
 
+best.radial = radial.tune$best.model
+summary(best.radial)
+
+pred.radial = predict(best.radial, newdata = testData)
+confusionMatrix(data = pred.radial,
+reference = testData$mpg_cat)
+
+plot(best.radial, trainData,
+    mpg_cat_n ~ weight,
+slice = list(
+       cylinders     = median(trainData$cylinders, na.rm = TRUE),
+       displacement  = median(trainData$displacement, na.rm = TRUE),
+       horsepower = median(trainData$horsepower, na.rm = TRUE),
+       weight = median(trainData$weight, na.rm = TRUE),
+       acceleration  = median(trainData$acceleration, na.rm = TRUE),
+       year          = median(trainData$year, na.rm = TRUE),
+       origin        = median(trainData$origin, na.rm = TRUE)
+     ),
+    grid = 100,
+    symbolPalette = c("cyan","darkblue"),
+    color.palette = heat.colors)
+
+plot(best.radial, testData,
+    mpg_cat_n ~ weight,
+slice = list(
+       cylinders     = median(trainData$cylinders, na.rm = TRUE),
+       displacement  = median(trainData$displacement, na.rm = TRUE),
+       horsepower = median(trainData$horsepower, na.rm = TRUE),
+       weight = median(trainData$weight, na.rm = TRUE),
+       acceleration  = median(trainData$acceleration, na.rm = TRUE),
+       year          = median(trainData$year, na.rm = TRUE),
+       origin        = median(trainData$origin, na.rm = TRUE)
+     ),
+    grid = 100,
+    symbolPalette = c("cyan","darkblue"),
+    color.palette = heat.colors)
 ```
 
 
 # Question 2: In this problem, we perform hierarchical clustering on the states using the USArrests data in the ISLR package. For each of the 50 states in the United States, the dataset contains the number of arrests per 100,000 residents for each of three crimes: Assault, Murder, and Rape. The dataset also contains the percent of the population in each state living in urban areas, UrbanPop. The four variables will be used as features for clustering.
+```{r}
+library(factoextra)
+library(gridExtra)
+library(corrplot)
+library(RColorBrewer)
+library(gplots)
+library(jpeg)
+
+data("USArrests")
+str(USArrests)
+```
 
 ## (a): Using hierarchical clustering with complete linkage and Euclidean distance, cluster the states. Cut the dendrogram at a height that results in three distinct clusters. Which states belong to which clusters?
+```{r}
+hc.complete <- hclust(dist(USArrests), method = "complete")
+hc.average <- hclust(dist(USArrests), method = "average")
+hc.single <- hclust(dist(USArrests), method = "single")
+hc.centroid <- hclust(dist(USArrests), method = "centroid")
+```
 
+```{r}
+fviz_dend(hc.complete, k = 3,
+cex = 0.3,
+palette = "jco", # color scheme; other palettes:"npg","aaas"...
+color_labels_by_k = TRUE,
+rect = TRUE, # whether to add a rectangle around groups.
+rect_fill = TRUE,
+rect_border = "jco",
+labels_track_height = 2.5)
+
+ind4.complete <- cutree(hc.complete, 3)
+USArrests[ind4.complete == 1,]
+USArrests[ind4.complete == 2,]
+USArrests[ind4.complete == 3,]
+```
 ## (b): Hierarchically cluster the states using complete linkage and Euclidean distance, after scaling the variables to have standard deviation one. Does scaling the variables change the clustering results? In your opinion, should the variables be scaled before the inter-observation dissimilarities are computed?
+ Yes, clustering with scaling affects the number of states in each cluster-there are more states is cluster 3 when scaling compared to when there is not scaling. Yes, the variables be scaled before the inter-observation dissimilarities are computed. 
+ 
+```{r}
+USArrests.scaled <- scale(USArrests)
+hc.complete.scaled <- hclust(dist(USArrests.scaled), method = "complete")
+
+fviz_dend(hc.complete.scaled, k = 3,
+          cex = 0.3,
+          palette = "jco",
+          color_labels_by_k = TRUE,
+          rect = TRUE,
+          rect_fill = TRUE,
+          rect_border = "jco",
+          labels_track_height = 2.5)
+
+ind4.scaled <- cutree(hc.complete.scaled, 3)
+
+USArrests[ind4.scaled == 1, ]
+USArrests[ind4.scaled == 2, ]
+USArrests[ind4.scaled == 3, ]
+
+```
+
 
